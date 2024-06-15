@@ -9,10 +9,9 @@ export default function PaidBy({close, peopleList, setSplitData}) {
         const name = e.target.innerText;
         setSplitData(prev=>{
             let newPrev = [...prev];
-            newPrev[0] = name;
+            newPrev[0] = [name];
             newPrev[1].name = name;
 
-            console.log(newPrev);
             return newPrev;
         })
         close({show:false, component:null})

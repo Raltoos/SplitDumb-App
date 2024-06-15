@@ -1,18 +1,20 @@
 /* eslint-disable react/prop-types */
 import Button from "./Button";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useContext } from "react";
 import PaidBy from "./PaidBy";
+
+import { PeopleContext } from "../store/people-context";
 
 export default function AddExpenseModal({
   handleClose,
-  updatePeople,
-  peopleInfo,
 }) {
+  const {peopleData, setPeople} = useContext(PeopleContext)
+
   const [addInfo, setAddInfo] = useState({ show: false, component: null });
   const [validationError, setValidationError] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState(["Add a new friend +"]);
-  const [splitData, setSplitData] = useState([["You"], { name: 0, amount: 0 }]);
+  const [splitData, setSplitData] = useState([["You"], { name: "", amount: 0 }]);
 
   const peopleNameList = useRef(["You"]);
   const money = useRef();
@@ -25,7 +27,7 @@ export default function AddExpenseModal({
       return;
     }
 
-    const filteredSuggestions = peopleInfo
+    const filteredSuggestions = peopleData
       .filter(
         (person) =>
           !person.user &&
@@ -35,7 +37,7 @@ export default function AddExpenseModal({
 
     filteredSuggestions.push("Add a new friend +");
     setSuggestions(filteredSuggestions);
-  }, [inputValue, peopleInfo]);
+  }, [inputValue, peopleData]);
 
   function splitEvenly(amt, no) {
     return (amt / no).toFixed(2);
@@ -52,7 +54,7 @@ export default function AddExpenseModal({
 
     const update = splitEvenly(amt, peopleNameList.current.length);
 
-    updatePeople((prev) => {
+    setPeople((prev) => {
       let newPeople = [...prev];
       const foundIndex = newPeople.findIndex(
         (person) => person.name.toLowerCase() === payer.toLowerCase()
@@ -75,7 +77,7 @@ export default function AddExpenseModal({
       return newPeople;
     });
 
-    updatePeople((prev) => {
+    setPeople((prev) => {
       let newPeople = [...prev];
 
       peopleNameList.current.forEach((item) => {
@@ -229,7 +231,7 @@ export default function AddExpenseModal({
                 })
               }
             >
-              {splitData[0]}
+              {splitData[0][0]}
             </button>{" "}
             and split <button className="text-green-500">equally</button>
           </p>

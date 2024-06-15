@@ -1,9 +1,13 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
+import '../index.css'
+
 import Button from "./Button";
 import AddExpenseModal from "./AddExpenseModal";
-import { useState, useRef } from "react";
-import { data } from "../assets/UserData";
+import PersonDisplay from "./PersonDisplay";
+
+import { PeopleContext } from '../store/people-context';
+import { useState, useContext } from "react";
 
 /* 
     state - [myself, personB, personC]
@@ -22,32 +26,34 @@ import { data } from "../assets/UserData";
 */
 
 export default function Dashboard() {
-  const [people, setPeople] = useState(data);
+  const {peopleData, setPeople} = useContext(PeopleContext)
   const [click, setClick] = useState([false, ""]);
 
   function handleAddExpense() {
     setClick([
       true,
-      <AddExpenseModal key={1} handleClose={setClick} updatePeople={setPeople} peopleInfo={people}/>,
+      <AddExpenseModal key={1} handleClose={setClick}/>,
     ]);
   }
 
   function handleDelete(toDelName){
+    const self = peopleData.find((obj)=>obj.user);
     setPeople(prev=>{
       let newPeople = [];
       prev.map(person => {
         if(person.name.toLowerCase() !== toDelName.toLowerCase()){
           newPeople.push(person);
-        } 
+        }//have to implement the functionality to handle the side effect of deleting the user in terms of transactions
         return true;
       })
 
       return newPeople;
     })
+    
   }
 
   function handleSelfDisplay(){
-    const self = people.find((obj)=>obj.user)
+    const self = peopleData.find((obj)=>obj.user)
 
     let balStyle;
     if(self.balance > 0) balStyle = "border-r border-black text-green-600";
@@ -68,7 +74,7 @@ export default function Dashboard() {
   if (click[0]) style += "opacity-40";
 
   return (
-    <div className="w-11/12 h-full opacity-100">
+    <div className="w-11/12 h-full opacity-100 mb-16 overflow-y-scroll no-scrollbar">
       {click[0] && click[1]}
 
       <div className={style}>
@@ -98,7 +104,7 @@ export default function Dashboard() {
         </div>
 
         <div className="w-full flex flex-col items-center mt-4 gap-2">
-          {people.map((obj) => (
+          {peopleData.map((obj) => (
             !obj.user?<PersonDisplay key={obj.name} data={obj} handleDelete={handleDelete}/>:null
           ))}
         </div>
@@ -114,31 +120,6 @@ function BalanceDisplay({ addStyle = "", balance = "0", children }) {
     <div className={style}>
       {children}
       <p className="text-sm">Rs. {balance}</p>
-    </div>
-  );
-}
-
-function PersonDisplay({ data, handleDelete }) {
-  let style = "text-sm ";
-
-  let owesStyle = style;
-  if(data.owes > 0) owesStyle += "text-green-600";
-
-  let owedStyle = style;
-  if(data.owed > 0) owedStyle += "text-red-500";
-
-  return (
-    <div className="w-11/12 md:w-7/12 flex justify-between border border-black rounded-lg p-4 active:scale-105 hover:scale-105 transition-all">
-      <div>
-        <p className="text-lg">{data.name}</p>
-        <p className="text-sm">Balance : Rs.{data.balance}</p>
-      </div>
-      <div>
-        <p className={owesStyle}>Owes : Rs.{data.owes}</p>
-        <p className={owedStyle}>Owed : Rs.{data.owed}</p>
-
-        <Button addStyle="bg-red-400 text-sm w-16 h-6 text-center flex flex-col justify-center items-center mt-2" onClick={() => handleDelete(data.name)}>DELETE</Button>
-      </div>
     </div>
   );
 }
