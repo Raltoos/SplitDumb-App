@@ -4,17 +4,21 @@ import { useState, useRef, useEffect, useContext } from "react";
 import PaidBy from "./PaidBy";
 
 import { PeopleContext } from "../store/people-context";
+import { TransactionContext } from "../store/transaction-context";
 
-export default function AddExpenseModal({
-  handleClose,
-}) {
-  const {peopleData, setPeople} = useContext(PeopleContext)
+export default function AddExpenseModal({ handleClose }) {
+  const { peopleData, setPeople } = useContext(PeopleContext);
+  const { setTransactions } = useContext(TransactionContext);
 
   const [addInfo, setAddInfo] = useState({ show: false, component: null });
   const [validationError, setValidationError] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState(["Add a new friend +"]);
-  const [splitData, setSplitData] = useState([["You"], { name: "", amount: 0 }]);
+  const [splitData, setSplitData] = useState([
+    { name: "You", amount: 0 },
+    false,
+    [],
+  ]);
 
   const peopleNameList = useRef(["You"]);
   const money = useRef();
@@ -44,8 +48,9 @@ export default function AddExpenseModal({
   }
 
   function handleAdd() {
-    const payer = splitData[0][0];
-    const amt = parseFloat(splitData[1].amount);
+    const payer = splitData[0].name;
+    const amt = parseFloat(splitData[0].amount);
+    let obj = {owe: false, amt: 0, peopleInvolved: [], paid: 0}
 
     if (peopleNameList.current.length === 0 || isNaN(amt) || amt <= 0) {
       setValidationError("Please enter valid names and amount.");
@@ -53,63 +58,224 @@ export default function AddExpenseModal({
     }
 
     const update = splitEvenly(amt, peopleNameList.current.length);
+    if (splitData[1] == true) {
+      const moneyPaidByMe = splitData[2].filter(
+        (list) => list[0] === "You"
+      )[0][1];
 
-    setPeople((prev) => {
-      let newPeople = [...prev];
-      const foundIndex = newPeople.findIndex(
-        (person) => person.name.toLowerCase() === payer.toLowerCase()
-      );
-      if (foundIndex !== -1) {
-        newPeople[foundIndex] = {
-          ...newPeople[foundIndex],
-          owed: +newPeople[foundIndex].owed + +update,
-          balance: +newPeople[foundIndex].balance + +update,
-        };
-      } else {
-        newPeople.push({
-          name: payer.charAt(0).toUpperCase() + payer.slice(1),
-          owes: 0,
-          owed: update,
-          balance: update,
+      obj.paid = +moneyPaidByMe;
+      setPeople((prev) => {
+        let newPeople = [...prev];
+        const index = newPeople.findIndex(
+          (person) => person.name.toLowerCase() === "you"
+        );
+        if (index !== -1) {
+          newPeople[index] = {
+            ...newPeople[index],
+            spent: (+newPeople[index].spent + +moneyPaidByMe).toFixed(2),
+            balance: (+newPeople[index].balance - +moneyPaidByMe).toFixed(2),
+          };
+        }
+        return newPeople;
+      });
+      if (+update > +moneyPaidByMe) {
+        //paid my share or less
+
+        obj.owe = true;
+        let list = []
+        splitData[2].forEach(element => {
+          list.push(element[0])
         });
-      }
+        obj.peopleInvolved = list;
 
-      return newPeople;
-    });
+        let diff = (+update - +moneyPaidByMe).toFixed(2);
+        obj.amt = +diff;
+        const extraPayers = splitData[2].filter((list) => +list[1] > +update);
+        const sortElements = (a, b) =>
+          +a[1] > +b[1] ? -1 : +a[1] < +b[1] ? +1 : 0;
+        extraPayers.sort(sortElements);
 
-    setPeople((prev) => {
-      let newPeople = [...prev];
-
-      peopleNameList.current.forEach((item) => {
-        if (item.toLowerCase() !== payer.toLowerCase()) {
-          const foundIndex = newPeople.findIndex(
-            (person) =>
-              person.name.toLowerCase() !== payer.toLowerCase() &&
-              person.name.toLowerCase() === item.toLowerCase()
-          );
-
-          if (foundIndex !== -1) {
-            newPeople[foundIndex] = {
-              ...newPeople[foundIndex],
-              owes: +newPeople[foundIndex].owes + +update,
-              balance: +newPeople[foundIndex].balance - +update,
-            };
-          } else {
-            newPeople.push({
-              name: item.charAt(0).toUpperCase() + item.slice(1),
-              owes: +update,
-              owed: 0,
-              balance: +update,
+        extraPayers.forEach((payer) => {
+          if (+diff >= 0) {
+            const toPay = Math.min(diff, +payer[1]);
+            diff -= toPay;
+            setPeople((prev) => {
+              let newPeople = [...prev];
+              const index = newPeople.findIndex(
+                (person) => person.name.toLowerCase() === "you"
+              );
+              if (index !== -1) {
+                newPeople[index] = {
+                  ...newPeople[index],
+                  owes: +newPeople[index].owes + +toPay.toFixed(2),
+                  balance: +newPeople[index].balance - +toPay.toFixed(2),
+                };
+              }
+              return newPeople;
+            });
+            setPeople((prev) => {
+              let newPeople = [...prev];
+              const index = newPeople.findIndex(
+                (person) => person.name.toLowerCase() === payer[0].toLowerCase()
+              );
+              if (index !== -1) {
+                newPeople[index] = {
+                  ...newPeople[index],
+                  owed: +newPeople[index].owed + +toPay.toFixed(2),
+                };
+              }
+              return newPeople;
             });
           }
-        }
-      });
+        });
+      } else {
+        //paid extra
+        obj.owe = false;
+        let list = []
+        splitData[2].forEach(element => {
+          list.push(element[0])
+        });
+        obj.peopleInvolved = list;
 
-      return newPeople;
-    });
+        let diff = (+moneyPaidByMe - +update).toFixed(2);
+        obj.amt = +diff;
+        const extraPayers = splitData[2].filter((list) => +list[1] < +update);
+        const sortElements = (a, b) =>
+          +a[1] > +b[1] ? +1 : +a[1] < +b[1] ? -1 : 0;
+        extraPayers.sort(sortElements);
+
+        extraPayers.forEach((payer) => {
+          if (+diff >= 0) {
+            const toPay = Math.min(diff, (+update - +payer[1]));
+            diff -= toPay;
+            setPeople((prev) => {
+              let newPeople = [...prev];
+              const index = newPeople.findIndex(
+                (person) => person.name.toLowerCase() === "you"
+              );
+              if (index !== -1) {
+                newPeople[index] = {
+                  ...newPeople[index],
+                  owed: +newPeople[index].owed + +toPay.toFixed(2),
+                  balance: +newPeople[index].balance + +toPay.toFixed(2),
+                };
+              }
+              return newPeople;
+            });
+            setPeople((prev) => {
+              let newPeople = [...prev];
+              const index = newPeople.findIndex(
+                (person) => person.name.toLowerCase() === payer[0].toLowerCase()
+              );
+              if (index !== -1) {
+                newPeople[index] = {
+                  ...newPeople[index],
+                  owes: +newPeople[index].owes + +toPay.toFixed(2),
+                };
+              }
+              return newPeople;
+            });
+          }
+        });
+      }
+    } else {
+      setPeople((prev) => {
+        let newPeople = [...prev];
+        if (payer === "You") {
+          obj.owe = false;
+          obj.paid = +amt;
+          obj.amt = +(amt - update).toFixed(2);
+          const youIndex = newPeople.findIndex(
+            (person) => person.name.toLowerCase() === payer.toLowerCase()
+          );
+          if (youIndex !== -1) {
+            newPeople[youIndex] = {
+              ...newPeople[youIndex],
+              owed: +newPeople[youIndex].owed + +(amt - update).toFixed(2),
+              spent: +newPeople[youIndex].owed + +update,
+              balance:
+                +newPeople[youIndex].balance + +(amt - update).toFixed(2),
+            };
+          }
+          obj.peopleInvolved = [];
+          peopleNameList.current.forEach((item) => {
+            if (item.toLowerCase() !== payer.toLowerCase()) {
+              obj.peopleInvolved.push(item);
+              const personIndex = newPeople.findIndex(
+                (person) => person.name.toLowerCase() === item.toLowerCase()
+              );
+              if (personIndex !== -1) {
+                newPeople[personIndex] = {
+                  ...newPeople[personIndex],
+                  owes: +newPeople[personIndex].owes + +update,
+                  balance: +newPeople[personIndex].balance - +update,
+                };
+              } else {
+                newPeople.push({
+                  name: item.charAt(0).toUpperCase() + item.slice(1),
+                  owes: +update,
+                  owed: 0,
+                  balance: -update,
+                });
+              }
+            }
+          });
+        } else {
+          obj.owe = true;
+          obj.paid = 0;
+          obj.amt = +update;
+          obj.peopleInvolved = [];
+          obj.peopleInvolved.push(payer);
+          const payerIndex = newPeople.findIndex(
+            (person) => person.name.toLowerCase() === payer.toLowerCase()
+          );
+          if (payerIndex !== -1) {
+            newPeople[payerIndex] = {
+              ...newPeople[payerIndex],
+              owed: +newPeople[payerIndex].owed + +update,
+              balance: +newPeople[payerIndex].balance + amt.toFixed(2),
+            };
+          }
+          const youIndex = newPeople.findIndex(
+            (person) => person.name.toLowerCase() === "you"
+          );
+          if (youIndex !== -1) {
+            newPeople[youIndex] = {
+              ...newPeople[youIndex],
+              owes: +newPeople[youIndex].owes + +update,
+              spent: +newPeople[youIndex].owed + +update,
+              balance: +newPeople[youIndex].balance - +update,
+            };
+          }
+        }
+        
+        console.log(obj);
+        setTransactions((prevTransactions) => [...prevTransactions, obj]);
+        return newPeople;
+      });
+    }
 
     setValidationError("");
     handleClose([false, ""]);
+  }
+
+  function handleAdditional() {
+    const amt = splitData[0].amount;
+    if (peopleNameList.current.length === 0 || isNaN(amt) || amt <= 0) {
+      setValidationError("Please enter valid names and amount.");
+      return;
+    }
+    setAddInfo({
+      show: true,
+      component: (
+        <PaidBy
+          amt={amt}
+          close={setAddInfo}
+          peopleList={peopleNameList.current}
+          setSplitData={setSplitData}
+        />
+      ),
+    });
   }
 
   function handleInputChange(e) {
@@ -137,7 +303,7 @@ export default function AddExpenseModal({
     setSplitData((prev) => {
       let newPrev = [...prev];
 
-      newPrev[1].amount = e.target.value;
+      newPrev[0].amount = e.target.value;
       return newPrev;
     });
   }
@@ -145,7 +311,7 @@ export default function AddExpenseModal({
   return (
     <dialog
       open
-      className="h-fit w-10/12 sm:w-1/3 bg-transparent opacity-100 flex flex-col gap-5 items-center z-10 font-mono"
+      className="h-fit w-10/12 sm:w-1/3 bg-transparent opacity-100 flex flex-col gap-5 items-center z-10 font-mono overflow-y-scroll no-scrollbar "
     >
       <div className="opacity-100 w-full bg-white border border-black rounded-xl">
         <div className="w-full flex justify-between items-center">
@@ -153,7 +319,7 @@ export default function AddExpenseModal({
             {validationError ? (
               <p className=" text-red-500 font-mono">{validationError}</p>
             ) : (
-              <p className="text-md font-bold capitalize border border-black px-10 py-1 mt-2">
+              <p className="bg-green-200 text-md font-bold capitalize border border-black px-10 py-1 mt-2">
                 Details of the expense
               </p>
             )}
@@ -216,22 +382,8 @@ export default function AddExpenseModal({
         <div className="p-2">
           <p>
             Paid by{" "}
-            <button
-              className="text-green-500"
-              onClick={() =>
-                setAddInfo({
-                  show: true,
-                  component: (
-                    <PaidBy
-                      close={setAddInfo}
-                      peopleList={peopleNameList.current}
-                      setSplitData={setSplitData}
-                    />
-                  ),
-                })
-              }
-            >
-              {splitData[0][0]}
+            <button className="text-green-500" onClick={handleAdditional}>
+              {splitData[2].length > 1 ? "Multiple People" : splitData[0].name}
             </button>{" "}
             and split <button className="text-green-500">equally</button>
           </p>

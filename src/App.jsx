@@ -7,6 +7,7 @@ import AllExpenses from "./components/AllExpenses";
 import { data } from "./assets/UserData.js";
 
 import { PeopleContext } from "./store/people-context";
+import { TransactionContext } from "./store/transaction-context.jsx";
 
 function displayReducer(state, action) {
   if (action.type == "DASHBOARD") {
@@ -20,23 +21,29 @@ function displayReducer(state, action) {
 
 export default function App() {
   const [people, setPeople] = useState(data);
+  const [transactions, setTransactions] = useState([]);
   const [displayState, displayStateDispatch] = useReducer(
     displayReducer,
     <Dashboard />
   );
 
-  const cntxValue = {
+  const cntxValue1 = {
     peopleData: people,
     setPeople: setPeople,
   };
+  const cntxValue2 = {
+    transactions: transactions,
+    setTransactions: setTransactions,
+  };
   return (
-    <PeopleContext.Provider
-      className="min-h-screen w-full bg-green-50 flex flex-col items-center pb-5"
-      value={cntxValue}
-    >
-      <Header />
-      {displayState}
-      <NavBar navClickFunc={displayStateDispatch} />
+    <PeopleContext.Provider value={cntxValue1}>
+      <TransactionContext.Provider value={cntxValue2}>
+        <div className="min-h-screen w-full bg-green-50 flex flex-col items-center pb-5 overflow-y-scroll no-scrollbar">
+          <Header />
+          {displayState}
+          <NavBar navClickFunc={displayStateDispatch} />
+        </div>
+      </TransactionContext.Provider>
     </PeopleContext.Provider>
   );
 }
