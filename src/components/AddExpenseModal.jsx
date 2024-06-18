@@ -13,6 +13,7 @@ export default function AddExpenseModal({ handleClose }) {
   const [addInfo, setAddInfo] = useState({ show: false, component: null });
   const [validationError, setValidationError] = useState("");
   const [inputValue, setInputValue] = useState("");
+  const [descValue, setDesc] = useState("");
   const [suggestions, setSuggestions] = useState(["Add a new friend +"]);
   const [splitData, setSplitData] = useState([
     { name: "You", amount: 0 },
@@ -50,12 +51,14 @@ export default function AddExpenseModal({ handleClose }) {
   function handleAdd() {
     const payer = splitData[0].name;
     const amt = parseFloat(splitData[0].amount);
-    let obj = {owe: false, amt: 0, peopleInvolved: [], paid: 0}
+    let obj = {owe: false, amt: 0, peopleInvolved: [], paid: 0, description: ""}
 
     if (peopleNameList.current.length === 0 || isNaN(amt) || amt <= 0) {
       setValidationError("Please enter valid names and amount.");
       return;
     }
+
+    obj.description = {descValue};
 
     const update = splitEvenly(amt, peopleNameList.current.length);
     if (splitData[1] == true) {
@@ -192,7 +195,7 @@ export default function AddExpenseModal({ handleClose }) {
             newPeople[youIndex] = {
               ...newPeople[youIndex],
               owed: +newPeople[youIndex].owed + +(amt - update).toFixed(2),
-              spent: +newPeople[youIndex].owed + +update,
+              spent: (+newPeople[youIndex].owed + +update).toFixed(2),
               balance:
                 +newPeople[youIndex].balance + +(amt - update).toFixed(2),
             };
@@ -243,7 +246,7 @@ export default function AddExpenseModal({ handleClose }) {
             newPeople[youIndex] = {
               ...newPeople[youIndex],
               owes: +newPeople[youIndex].owes + +update,
-              spent: +newPeople[youIndex].owed + +update,
+              spent: (+newPeople[youIndex].owed + +update).toFixed(2),
               balance: +newPeople[youIndex].balance - +update,
             };
           }
@@ -308,6 +311,10 @@ export default function AddExpenseModal({ handleClose }) {
     });
   }
 
+  function handleDescValueChange(e){
+    setDesc(e.target.value);
+  }
+
   return (
     <dialog
       open
@@ -364,6 +371,8 @@ export default function AddExpenseModal({ handleClose }) {
         <div className="w-full flex flex-col gap-4 items-center ">
           <input
             type="text"
+            value={descValue}
+            onChange={handleDescValueChange}
             placeholder="Enter a description"
             className="w-11/12 p-2 border border-black rounded-md h-8"
           />

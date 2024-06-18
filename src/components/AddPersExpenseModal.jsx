@@ -1,104 +1,50 @@
-/* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
 import Button from "./Button";
 import { useState, useRef, useContext } from "react";
 
 import { PeopleContext } from "../store/people-context";
+import { TransactionContext } from "../store/transaction-context";
 
 export default function AddExpenseModal({ handleClose }) {
-  // const { peopleData, setPeople } = useContext(PeopleContext);
+  const { setPeople } = useContext(PeopleContext);
+  const { setTransactions } = useContext(TransactionContext);
 
   const [validationError, setValidationError] = useState("");
+  const [descValue, setDesc] = useState("");
   const [splitData, setSplitData] = useState([
-    ["You"],
-    { name: "", amount: 0 },
+    { name: "You", amount: 0 },
+    false,
+    [],
   ]);
 
-  const peopleNameList = useRef(["You"]);
   const money = useRef();
 
-  function splitEvenly(amt, no) {
-    return (amt / no).toFixed(2);
-  }
-
   function handleAdd() {
-    const payer = splitData[0][0];
-    const amt = parseFloat(splitData[1].amount);
+    const amt = parseFloat(splitData[0].amount);
+    let obj = {owe: -1, amt: 0, peopleInvolved: [], paid: 0, description: ""}
 
-    if (peopleNameList.current.length === 0 || isNaN(amt) || amt <= 0) {
-      setValidationError("Please enter valid names and amount.");
+    if (isNaN(amt) || amt <= 0) {
+      setValidationError("Please enter a valid amount.");
       return;
     }
-
-    const update = splitEvenly(amt, peopleNameList.current.length);
-    console.log(amt-update)
+    obj.amt = +amt;
+    obj.description = {descValue};
     setPeople((prev) => {
       let newPeople = [...prev];
-      if (payer.toLowerCase() === "you") {
-        // Update "You" payer logic
-        const youIndex = newPeople.findIndex(
-          (person) => person.name.toLowerCase() === payer.toLowerCase()
-        );
-        if (youIndex !== -1) {
-          newPeople[youIndex] = {
-            ...newPeople[youIndex],
-            owed: +newPeople[youIndex].owed + (amt-update),
-            balance: +newPeople[youIndex].balance + amt,
-          };
-        } else {
-          newPeople.push({
-            name: payer.charAt(0).toUpperCase() + payer.slice(1),
-            owes: 0,
-            owed: amt,
-            balance: amt,
-          });
-        }
-
-        peopleNameList.current.forEach((item) => {
-          if (item.toLowerCase() !== payer.toLowerCase()) {
-            const personIndex = newPeople.findIndex(
-              (person) => person.name.toLowerCase() === item.toLowerCase()
-            );
-            if (personIndex !== -1) {
-              newPeople[personIndex] = {
-                ...newPeople[personIndex],
-                owes: +newPeople[personIndex].owes + +update,
-                balance: +newPeople[personIndex].balance - +update,
-              };
-            } else {
-              newPeople.push({
-                name: item.charAt(0).toUpperCase() + item.slice(1),
-                owes: +update,
-                owed: 0,
-                balance: -update,
-              });
-            }
-          }
-        });
-      } else {
-        // Update other payer logic
-        const payerIndex = newPeople.findIndex(
-          (person) => person.name.toLowerCase() === payer.toLowerCase()
-        );
-        if (payerIndex !== -1) {
-          newPeople[payerIndex] = {
-            ...newPeople[payerIndex],
-            owed: +newPeople[payerIndex].owed + +update,
-          };
-        } else {
-          newPeople.push({
-            name: payer.charAt(0).toUpperCase() + payer.slice(1),
-            owes: 0,
-            owed: update,
-            balance: update,
-          });
-        }
+      const index = newPeople.findIndex(
+        (person) => person.name.toLowerCase() === "you"
+      );
+      if (index !== -1) {
+        newPeople[index] = {
+          ...newPeople[index],
+          spent: +newPeople[index].spent + +amt.toFixed(2),
+          balance: +newPeople[index].balance - +amt.toFixed(2),
+        };
       }
-
-      console.log("Updated state:", newPeople);
       return newPeople;
     });
 
+    setTransactions((prevTransactions) => [...prevTransactions, obj]);
     setValidationError("");
     handleClose([false, ""]);
   }
@@ -107,9 +53,13 @@ export default function AddExpenseModal({ handleClose }) {
     setSplitData((prev) => {
       let newPrev = [...prev];
 
-      newPrev[1].amount = e.target.value;
+      newPrev[0].amount = e.target.value;
       return newPrev;
     });
+  }
+
+  function handleDescValueChange(e){
+    setDesc(e.target.value);
   }
 
   return (
@@ -118,12 +68,12 @@ export default function AddExpenseModal({ handleClose }) {
       className="h-fit w-10/12 sm:w-1/3 bg-transparent opacity-100 flex flex-col gap-5 items-center z-10 font-mono overflow-y-scroll no-scrollbar "
     >
       <div className="opacity-100 w-full bg-white border border-black rounded-xl">
-        <div className="w-full flex justify-between items-center">
+        <div className="w-full flex justify-between items-center mb-5">
           <div className="ml-5">
             {validationError ? (
               <p className=" text-red-500 font-mono">{validationError}</p>
             ) : (
-              <p className="text-md font-bold capitalize border border-black px-10 py-1 mt-2">
+              <p className="bg-green-200 text-md font-bold capitalize border border-black px-10 py-1 mt-2">
                 Details of the expense
               </p>
             )}
@@ -140,6 +90,8 @@ export default function AddExpenseModal({ handleClose }) {
         <div className="w-full flex flex-col gap-4 items-center ">
           <input
             type="text"
+            value={descValue}
+            onChange={handleDescValueChange}
             placeholder="Enter a description"
             className="w-11/12 p-2 border border-black rounded-md h-8"
           />
@@ -164,7 +116,7 @@ export default function AddExpenseModal({ handleClose }) {
           </Button>
         </form>
       </div>
+
     </dialog>
   );
 }
-

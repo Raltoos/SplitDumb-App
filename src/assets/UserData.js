@@ -2,16 +2,16 @@ export const data = [
     {
       name: 'You',
       user: true,
-      balance: 0,
-      spent: 0,
-      owes: 0,
-      owed: 0,
+      balance: 10000,
+      spent: 150,
+      owes: 50,
+      owed: 500,
     },
     {
       name: "Harsh",
       user: false,
       balance: 0,
-      owes: 0,
+      owes: 50,
       owed: 0,
     },
     {
@@ -26,13 +26,13 @@ export const data = [
       user: false,
       balance: 0,
       owes: 0,
-      owed: 0,
+      owed: 500,
     },
     {
       name: "Krishn",
       user: false,
       balance: 0,
-      owes: 0,
+      owes: 50,
       owed: 0,
     },
   ];
