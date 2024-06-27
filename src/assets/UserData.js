@@ -4,8 +4,8 @@ export const data = [
       user: true,
       balance: 10000,
       spent: 150,
-      owes: 50,
-      owed: 500,
+      owes: 500,
+      owed: 100,
     },
     {
       name: "Harsh",

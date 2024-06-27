@@ -21,7 +21,7 @@ function displayReducer(state, action) {
 
 export default function App() {
   const [people, setPeople] = useState(data);
-  const [transactions, setTransactions] = useState([{owe: false, amt: 50, peopleInvolved: ["Harsh", "Krishn"], paid: 150, description: {descValue:"Went to a park and paid for everyone's ticket"}}, {owe: true, amt: 500, peopleInvolved: ["Aadit", "Pranav"], paid: 0, description: {descValue:"I have to pay my share for the movie ticket"}}]);
+  const [transactions, setTransactions] = useState([{owe: false, amt: 100, peopleInvolved: ["Harsh", "Krishn"], paid: 150, description: {descValue:"Went to a park and paid for everyone's ticket"}}, {owe: true, amt: 500, peopleInvolved: ["Aadit", "Pranav"], paid: 0, description: {descValue:"I have to pay my share for the movie ticket"}}]);
   const [displayState, displayStateDispatch] = useReducer(
     displayReducer,
     <Dashboard />
